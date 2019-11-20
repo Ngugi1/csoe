@@ -5,23 +5,32 @@
 # Get complexity
 from datetime import datetime
 from pydriller import RepositoryMining
+import re
+
+#  java file regex
+java_file_regex = re.compile("")
+
 # Repositories and their main branches
 repos = [("aries", "trunk"), 
                 ("falcon", "master"), 
                 ("ranger","master"),
                 ("sqoop", "trunk"),
                 ("whirr", "trunk")]
-commit_type = ".java"
-
 
 # Prepare repo for mining
-def configRepo(repo, reversed=None, start=None,end=None):
+def configRepo(repo, reversed=None, 
+                start=None,
+                end=None,
+                file_types=[".java"]):
     # Mine the main branch and only look for commits
     # for java files
     name, branch = repo
     return RepositoryMining(name, 
                             only_in_branch = branch, 
-                            only_modifications_with_file_types= [commit_type], reversed_order=reversed, since=start, to=end)
+                            only_modifications_with_file_types=file_types, 
+                            reversed_order=reversed, 
+                            since=start, 
+                            to=end)
 
 
 # Traverse repo commits
@@ -67,9 +76,15 @@ def getFileName(modification):
 # Given a unix timestamp, give back a date
 def unixTimestampToDate(timestamp):
     return datetime.fromtimestamp(timestamp)
-
+def updateNumberOfDevs(dictionary, key):
+      # No. of developers is at index 3
+    if keyExists(dictionary,key):
+        return dictionary[key][3] + 1
+    else:
+        return 1
 #  Update number of changes 
 def updateNumberOfChanges(dictionary, key):
+    # Number of changes  is at index 2 
     if keyExists(dictionary, key):
         return dictionary[key][2] + 1
     else:
@@ -88,11 +103,12 @@ def processTimePeriod(period):
         # Find all modifications
         for modification in commit.modifications:
             # Uopdate the metrics
-            metrics[getFileName(modification)] = [getLinesOfCode(modification), 
-                                                    getComplexity(modification),
-                                                    # If the file is not added already, then this is the first time it was added
-                                                   updateNumberOfChanges(metrics,getFileName(modification))]
-    
+            if(getFileName(modification).endswith('.java')):
+                metrics[getFileName(modification)] = [getLinesOfCode(modification), 
+                                                        getComplexity(modification),
+                                                        # If the file is not added already, then this is the first time it was added
+                                                    updateNumberOfChanges(metrics,getFileName(modification)),
+                                                    updateNumberOfDevs(metrics, getFileName(modification))]
     print(metrics)
 
 
