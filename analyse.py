@@ -3,7 +3,7 @@
 # Split the timestamps into 10 periods
 # Get LOC of c in P
 # Get complexity
-from time import time
+from datetime import datetime
 from pydriller import RepositoryMining
 # Repositories and their main branches
 repos = [("aries", "trunk"), 
@@ -15,13 +15,13 @@ commit_type = ".java"
 
 
 # Prepare repo for mining
-def configRepo(repo, reversed=None):
+def configRepo(repo, reversed=None, start=None,end=None):
     # Mine the main branch and only look for commits
     # for java files
     name, branch = repo
     return RepositoryMining(name, 
                             only_in_branch = branch, 
-                            only_modifications_with_file_types= [commit_type], reversed_order=reversed)
+                            only_modifications_with_file_types= [commit_type], reversed_order=reversed, since=start, to=end)
 
 
 # Traverse repo commits
@@ -64,21 +64,41 @@ def getComplexity(modification):
 # Get the filename
 def getFileName(modification):
     return modification.filename
+# Given a unix timestamp, give back a date
+def unixTimestampToDate(timestamp):
+    return datetime.fromtimestamp(timestamp)
 
-
-
-
-for repo in repos:
-    for commit in configRepo(repo).traverse_commits():
+#  Update number of changes 
+def updateNumberOfChanges(dictionary, key):
+    if keyExists(dictionary, key):
+        return dictionary[key][2] + 1
+    else:
+        return 0
+#  does a key exist in th e dictionary?
+def keyExists(dictionary, key):
+    key in dictionary
+# Calculate all metrics for a given time period
+def processTimePeriod(period):
+    # Period : (start_period, end_period)
+    start,end = period
+    # Metrics is a dictionary to keep track of metrics for this period
+    metrics = {}
+    # Traverse all commits in the time period
+    for commit in traverse(configRepo(repo, start=unixTimestampToDate(start), end=unixTimestampToDate(end))):
+        # Find all modifications
         for modification in commit.modifications:
-            print(getFileName(modification), getLinesOfCode(modification), getComplexity(modification))
-    exit()
-    start, end = getRepoLife(configRepo(repo), configRepo(repo, reversed=True))
-    print("Start - {} ".format(start.strftime("%Y-%m-%d %H:%M:%S")))
-    print("Start - {} ".format(end.strftime("%Y-%m-%d %H:%M:%S")))
-    splits = splitTimePeriods(int(start.strftime("%s")), int(end.strftime("%s")), 3)
+            # Uopdate the metrics
+            metrics[getFileName(modification)] = [getLinesOfCode(modification), 
+                                                    getComplexity(modification),
+                                                    # If the file is not added already, then this is the first time it was added
+                                                   updateNumberOfChanges(metrics,getFileName(modification))]
     
-    print("\n")
-    # print("Initial commit - {} and Last commit - {} \n".format(start, end))
+    print(metrics)
 
+
+# Process all repos
+for repo in repos:
+    start, end = getRepoLife(configRepo(repo), configRepo(repo, reversed=True))
+    for period in splitTimePeriods(int(start.strftime("%s")),int(end.strftime("%s")),3):
+        processTimePeriod(period)
 
