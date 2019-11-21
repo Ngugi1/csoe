@@ -107,7 +107,7 @@ def processTimePeriod(period):
         # Find all modifications
         for modification in commit.modifications:
             # Update the metrics
-            if(getFileName(modification).endswith('.java')):
+            if(getFileName(modification).endswith('.java') and  modification.change_type != "Deleted" and modification.change_type != "Renamed"):
                 total_changes += 1
                 metrics[getFileName(modification)] = [getLinesOfCode(modification), 
                                                       getComplexity(modification),
